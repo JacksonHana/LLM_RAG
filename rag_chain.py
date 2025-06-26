@@ -17,6 +17,9 @@ QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 if not QDRANT_URL:
     raise ValueError("QDRANT_URL is not set in the environment variables.")
 
+# Collect the collection name from the environment variable or use a default
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "phap_luat")
+
 # Initialize Qdrant client
 qdrant_client = QdrantClient(url=QDRANT_URL)
 
@@ -35,16 +38,19 @@ def create_retrieval_qa_chain(collection_name: str) -> RetrievalQA:
         model_name=EMBEDDING_MODEL_NAME,
         model_kwargs={"device": "cpu"}  # Adjust device as needed
     )
+    if not embeddings:
+        raise ValueError("Failed to initialize embeddings. Check the EMBEDDING_MODEL_NAME.")
+    
 
     # Initialize the chat model
-    chat_model = ChatGoogleGenerativeAI(google_api_key=GOOGLE_API_KEY)
+    chat_model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GOOGLE_API_KEY)
 
     # Create the RetrievalQA chain
     retrieval_qa_chain = RetrievalQA.from_chain_type(
         llm=chat_model,
         chain_type="stuff",
         retriever=qdrant_client.as_retriever(
-            collection_name=collection_name,
+            collection_name=COLLECTION_NAME,
             embedding=embeddings
         )
     )
